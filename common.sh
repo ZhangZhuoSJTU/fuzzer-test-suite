@@ -116,3 +116,33 @@ build_fuzzer() {
   build_${FUZZING_ENGINE}
 }
 
+setup_afl_clang() {
+  export CC=afl-clang-fast
+  export CXX=afl-clang-fast++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_afl() {
+  export CC=afl-gcc
+  export CXX=afl-g++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_normal() {
+  export CC=gcc
+  export CXX=g++
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+prepare_target() {
+  cp $SCRIPT_DIR/target.cc target.cc
+  cat $SCRIPT_DIR/../target.in >> target.cc
+}

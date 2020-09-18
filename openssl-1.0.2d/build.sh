@@ -11,40 +11,13 @@ build_lib() {
 }
 
 build_exe() {
-  cp $SCRIPT_DIR/target.cc target.cc
-  cat $SCRIPT_DIR/../target.in >> target.cc
+  prepare_target || exit
   $CXX $CXXFLAGS target.cc -DCERT_PATH=\"$SCRIPT_DIR/\"  BUILD/libssl.a BUILD/libcrypto.a -lgcrypt -I BUILD/include -o $EXECUTABLE_NAME_BASE.$1
 }
 
 get_source() {
   rm -rf SRC
   get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_2d SRC
-}
-
-setup_afl_clang() {
-  export CC=afl-clang-fast
-  export CXX=afl-clang-fast++
-  export AFL_DONT_OPTIMIZE="yes"
-  export CPPFLAGS="-g -O2 -no-pie"
-  export CFLAGS="-g -O2 -no-pie"
-  export CXXFLAGS="-g -O2 -no-pie"
-}
-
-setup_afl() {
-  export CC=afl-gcc
-  export CXX=afl-g++
-  export AFL_DONT_OPTIMIZE="yes"
-  export CPPFLAGS="-g -O2 -no-pie"
-  export CFLAGS="-g -O2 -no-pie"
-  export CXXFLAGS="-g -O2 -no-pie"
-}
-
-setup_normal() {
-  export CC=gcc
-  export CXX=g++
-  export CPPFLAGS="-g -O2 -no-pie"
-  export CFLAGS="-g -O2 -no-pie"
-  export CXXFLAGS="-g -O2 -no-pie"
 }
 
 get_source || exit 1
