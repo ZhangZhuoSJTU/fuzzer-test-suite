@@ -20,6 +20,7 @@ build_exe() {
 }
 
 get_source() {
+  rm -rf SRC
   get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_1f SRC
 }
 

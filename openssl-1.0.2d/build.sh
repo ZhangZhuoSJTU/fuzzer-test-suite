@@ -10,13 +10,53 @@ build_lib() {
   (cd BUILD && CC="$CC $CFLAGS" ./config && make clean && make -j $JOBS)
 }
 
-get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_2d SRC
-build_lib
-build_fuzzer
+build_exe() {
+  cp $SCRIPT_DIR/target.cc target.cc
+  cat $SCRIPT_DIR/../target.in >> target.cc
+  $CXX $CXXFLAGS target.cc -DCERT_PATH=\"$SCRIPT_DIR/\"  BUILD/libssl.a BUILD/libcrypto.a -lgcrypt -I BUILD/include -o $EXECUTABLE_NAME_BASE.$1
+}
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS $SCRIPT_DIR/target.cc -DCERT_PATH=\"$SCRIPT_DIR/\"  BUILD/libssl.a BUILD/libcrypto.a $LIB_FUZZING_ENGINE -lgcrypt -I BUILD/include -o $EXECUTABLE_NAME_BASE
+get_source() {
+  rm -rf SRC
+  get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_2d SRC
+}
+
+setup_afl_clang() {
+  export CC=afl-clang-fast
+  export CXX=afl-clang-fast++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_afl() {
+  export CC=afl-gcc
+  export CXX=afl-g++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_normal() {
+  export CC=gcc
+  export CXX=g++
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
