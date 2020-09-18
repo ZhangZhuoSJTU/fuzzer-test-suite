@@ -13,13 +13,47 @@ build_lib() {
   (cd BUILD && ./configure --disable-shared &&  make -j $JOBS)
 }
 
+build_exe(){
+  cp $SCRIPT_DIR/target.cc target.cc
+  cat $SCRIPT_DIR/../target.in >> target.cc
+  $CXX $CXXFLAGS -std=c++11 -no-pie target.cc BUILD/.libs/libpng12.a -I BUILD/ -I BUILD -lz -o $EXECUTABLE_NAME_BASE.$1
+}
+
+setup_afl_clang() {
+  export CC=afl-clang-fast
+  export CXX=afl-clang-fast++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_afl() {
+  export CC=afl-gcc
+  export CXX=afl-g++
+  export AFL_DONT_OPTIMIZE="yes"
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_normal() {
+  export CC=gcc
+  export CXX=g++
+  export CPPFLAGS="-g -O2 -no-pie"
+  export CFLAGS="-g -O2 -no-pie"
+  export CXXFLAGS="-g -O2 -no-pie"
+}
+
+setup_afl_clang || exit 1
 build_lib || exit 1
-build_fuzzer || exit 1
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS -std=c++11 $SCRIPT_DIR/target.cc BUILD/.libs/libpng12.a $LIB_FUZZING_ENGINE -I BUILD/ -I BUILD -lz -o $EXECUTABLE_NAME_BASE
-$CXX $CXXFLAGS -std=c++11 $SCRIPT_DIR/target.cc BUILD/.libs/libpng12.a $LIB_FUZZING_ENGINE -I BUILD/ -I BUILD -lz -o $EXECUTABLE_NAME_BASE-structure-aware \
-  -include $SCRIPT_DIR/png_mutator.h -DPNG_MUTATOR_DEFINE_LIBFUZZER_CUSTOM_MUTATOR -DSTANDALONE_TARGET=$STANDALONE_TARGET
+build_exe "afl.clang" || exit 1
+
+# setup_normal || exit 1
+# build_lib || exit 1
+# build_exe "normal" || exit 1
+ 
+# setup_afl || exit 1
+# build_lib || exit 1
+# build_exe "afl" || exit 1
+

@@ -6,20 +6,21 @@
 [ -e $(basename $0) ] && echo "PLEASE USE THIS SCRIPT FROM ANOTHER DIR" && exit 1
 
 # Ensure that fuzzing engine, if defined, is valid
-FUZZING_ENGINE=${FUZZING_ENGINE:-"fsanitize_fuzzer"}
-POSSIBLE_FUZZING_ENGINE="libfuzzer afl honggfuzz coverage fsanitize_fuzzer hooks"
+FUZZING_ENGINE=${FUZZING_ENGINE:-"normal"}
+POSSIBLE_FUZZING_ENGINE="libfuzzer afl honggfuzz coverage fsanitize_fuzzer hooks normal"
 !(echo "$POSSIBLE_FUZZING_ENGINE" | grep -w "$FUZZING_ENGINE" > /dev/null) && \
   echo "USAGE: Error: If defined, FUZZING_ENGINE should be one of the following:
   $POSSIBLE_FUZZING_ENGINE. However, it was defined as $FUZZING_ENGINE" && exit 1
 
 SCRIPT_DIR=$(dirname $0)
-EXECUTABLE_NAME_BASE=$(basename $SCRIPT_DIR)-${FUZZING_ENGINE}
+EXECUTABLE_NAME_BASE=$(basename $SCRIPT_DIR)
 LIBFUZZER_SRC=${LIBFUZZER_SRC:-$(dirname $(dirname $SCRIPT_DIR))/Fuzzer}
 STANDALONE_TARGET=0
 AFL_SRC=${AFL_SRC:-$(dirname $(dirname $SCRIPT_DIR))/AFL}
 HONGGFUZZ_SRC=${HONGGFUZZ_SRC:-$(dirname $(dirname $SCRIPT_DIR))/honggfuzz}
 COVERAGE_FLAGS="-O0 -fsanitize-coverage=trace-pc-guard"
 FUZZ_CXXFLAGS="-O2 -fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize-address-use-after-scope -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-gep,trace-div"
+NORMAL_CXXFLAGS="-O2 -fno-omit-frame-pointer"
 CORPUS=CORPUS-$EXECUTABLE_NAME_BASE
 JOBS=${JOBS:-"8"}
 
@@ -39,6 +40,9 @@ elif [[ $FUZZING_ENGINE == "honggfuzz" ]]; then
 elif [[ $FUZZING_ENGINE == "coverage" ]]; then
   export CFLAGS=${CFLAGS:-$COVERAGE_FLAGS}
   export CXXFLAGS=${CXXFLAGS:-$COVERAGE_FLAGS}
+elif [[ $FUZZING_ENGINE == "normal" ]]; then
+  export CFLAGS=${CFLAGS:-"$NORMAL_CXXFLAGS"}
+  export CXXFLAGS=${CXXFLAGS:-"$NORMAL_CXXFLAGS"}
 else
   export CFLAGS=${CFLAGS:-"$FUZZ_CXXFLAGS"}
   export CXXFLAGS=${CXXFLAGS:-"$FUZZ_CXXFLAGS"}
@@ -98,6 +102,13 @@ build_coverage () {
 build_hooks() {
   LIB_FUZZING_ENGINE=libFuzzingEngine-hooks.o
   $CXX -c $HOOKS_FILE -o $LIB_FUZZING_ENGINE
+}
+
+build_normal() {
+  # cp $SCRIPT_DIR/target.cc target.cc
+  # cat $SCRIPT_DIR/../target.in >> target.cc
+  # $CXX $CXXFLAGS -std=c++11 -no-pie target.cc $1 -I BUILD/ -I BUILD -lz -lm -o $EXECUTABLE_NAME_BASE
+  exit 1
 }
 
 build_fuzzer() {
