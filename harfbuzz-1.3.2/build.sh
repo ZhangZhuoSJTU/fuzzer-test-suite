@@ -4,8 +4,6 @@
 . $(dirname $0)/../custom-build.sh $1 $2
 . $(dirname $0)/../common.sh
 
-get_git_revision https://github.com/behdad/harfbuzz.git  f73a87d9a8c76a181794b74b527ea268048f78e3 SRC
-
 build_lib() {
   rm -rf BUILD
   cp -rf SRC BUILD
@@ -13,17 +11,34 @@ build_lib() {
     make -j $JOBS -C src fuzzing)
 }
 
-build_lib
-build_fuzzer
+build_exe() {
+  if [[ ! -d seeds ]]; then
+    mkdir seeds
+    cp BUILD/test/shaping/fonts/sha1sum/* seeds/
+  fi
 
-if [[ ! -d seeds ]]; then
-  mkdir seeds
-  cp BUILD/test/shaping/fonts/sha1sum/* seeds/
-fi
+  cp BUILD/test/fuzzing/hb-fuzzer.cc target.cc
+  prepare_target || exit 2
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS -std=c++11 -I BUILD/src/ BUILD/test/fuzzing/hb-fuzzer.cc BUILD/src/.libs/libharfbuzz-fuzzing.a $LIB_FUZZING_ENGINE -lglib-2.0 -o $EXECUTABLE_NAME_BASE
+  $CXX $CXXFLAGS -std=c++11 -I BUILD/src/ target.cc BUILD/src/.libs/libharfbuzz-fuzzing.a -lglib-2.0 -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_revision https://github.com/behdad/harfbuzz.git  f73a87d9a8c76a181794b74b527ea268048f78e3 SRC
+  fi
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
