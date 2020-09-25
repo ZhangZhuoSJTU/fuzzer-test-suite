@@ -10,14 +10,33 @@ build_lib() {
   (cd BUILD && make fuzzers -Ctest -j $JOBS)
 }
 
-get_git_revision https://github.com/nlohmann/json.git b04543ecc58188a593f8729db38c2c87abd90dc3 SRC
-build_lib
-build_fuzzer
+build_exe() {
+  if [[ ! -d seeds ]]; then
+    cp -r $SCRIPT_DIR/seeds .
+  fi
 
-cp -r $SCRIPT_DIR/seeds .
+  cp BUILD/test/src/fuzzer-parse_json.cpp target.cc
+  prepare_target || exit 2
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-$CXX $CXXFLAGS -std=c++11 -I BUILD/src BUILD/test/src/fuzzer-parse_json.cpp $LIB_FUZZING_ENGINE -o $EXECUTABLE_NAME_BASE
+  $CXX $CXXFLAGS -std=c++11 -I BUILD/src target.cc -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_revision https://github.com/nlohmann/json.git b04543ecc58188a593f8729db38c2c87abd90dc3 SRC
+  fi
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
