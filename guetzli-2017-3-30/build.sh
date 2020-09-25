@@ -10,12 +10,29 @@ build_lib() {
   (cd BUILD && make guetzli_static -j $JOBS)
 }
 
-get_git_tag https://github.com/google/guetzli.git 9afd0bbb7db0bd3a50226845f0f6c36f14933b6b SRC
-build_lib
-build_fuzzer
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS -std=c++11 BUILD/fuzz_target.cc -I BUILD/ BUILD/bin/Release/libguetzli_static.a $LIB_FUZZING_ENGINE -o $EXECUTABLE_NAME_BASE
+build_exe() {
+  cp BUILD/fuzz_target.cc target.cc
+  prepare_target || exit 2
+
+  $CXX $CXXFLAGS -std=c++11 target.cc -I BUILD/ BUILD/bin/Release/libguetzli_static.a -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_tag https://github.com/google/guetzli.git 9afd0bbb7db0bd3a50226845f0f6c36f14933b6b SRC
+  fi
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
