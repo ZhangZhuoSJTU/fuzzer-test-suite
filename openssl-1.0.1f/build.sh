@@ -12,15 +12,16 @@ build_lib() {
 }
 
 build_exe() {
-  prepare_target || exit
+  prepare_target || exit 2
   $CXX $CXXFLAGS target.cc -DCERT_PATH=\"$SCRIPT_DIR/\"  BUILD/libssl.a BUILD/libcrypto.a -I BUILD/include -ldl -o $EXECUTABLE_NAME_BASE.$1
   rm -rf runtime
   cp -rf $SCRIPT_DIR/runtime .
 }
 
 get_source() {
-  rm -rf SRC
-  get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_1f SRC
+  if [[ ! -d SRC ]]; then
+    get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_1f SRC
+  fi
 }
 
 get_source || exit 1

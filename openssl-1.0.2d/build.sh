@@ -16,8 +16,9 @@ build_exe() {
 }
 
 get_source() {
-  rm -rf SRC
-  get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_2d SRC
+  if [[ ! -d SRC ]]; then
+    get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_0_2d SRC
+  fi
 }
 
 get_source || exit 1
