@@ -7,16 +7,46 @@
 build_lib() {
   rm -rf BUILD
   cp -rf SRC BUILD
-  (cd BUILD/build && ./autogen.sh && cd .. && ./configure --disable-shared --without-nettle && make -j $JOBS)
+  (
+    cd BUILD/build &&
+    ./autogen.sh &&
+    cd .. &&
+    ./configure --disable-shared --without-nettle &&
+    sed -i "1 i\#include <sys/sysmacros.h>" libarchive/*.c &&
+    sed -i "1 i\#include <fcntl.h>" libarchive/archive_read_disk_posix.c &&
+    sed -i "1 i\#include <sys/time.h>" libarchive/archive_read_disk_posix.c &&
+    make -j $JOBS
+  )
 }
 
-get_git_revision https://github.com/libarchive/libarchive.git 51d7afd3644fdad725dd8faa7606b864fd125f88 SRC
-build_lib
-build_fuzzer
+build_exe() {
+  cp $SCRIPT_DIR/libarchive_fuzzer.cc target.cc
+  prepare_target || exit 2
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
+  $CXX $CXXFLAGS -std=c++11 target.cc -I BUILD/libarchive BUILD/.libs/libarchive.a -lz -lbz2 -lxml2 -lcrypto -lssl -llzma -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_revision https://github.com/libarchive/libarchive.git 51d7afd3644fdad725dd8faa7606b864fd125f88 SRC
+  fi
+}
+
+get_source || exit 1
+
 set -x
-$CXX $CXXFLAGS -std=c++11 $SCRIPT_DIR/libarchive_fuzzer.cc -I BUILD/libarchive BUILD/.libs/libarchive.a $LIB_FUZZING_ENGINE -lz  -lbz2 -lxml2 -lcrypto -lssl -llzma -o $EXECUTABLE_NAME_BASE
+
+setup_normal || exit 1
+export CFLAGS="$CFLAGS -Wno-implicit-fallthrough -D_GNU_SOURCE"
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl_clang || exit 1
+export CFLAGS="$CFLAGS -Wno-implicit-fallthrough -D_GNU_SOURCE"
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
+
+setup_afl || exit 1
+export CFLAGS="$CFLAGS -Wno-implicit-fallthrough -D_GNU_SOURCE"
+build_lib || exit 1
+build_exe "afl" || exit 1
