@@ -10,16 +10,35 @@ build_lib() {
   (cd BUILD && CC="$CC $CFLAGS" ./config && make clean && make -j $JOBS)
 }
 
-get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_1_0c SRC
-build_lib
-build_fuzzer
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_tag https://github.com/openssl/openssl.git OpenSSL_1_1_0c SRC
+  fi
+}
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-for f in bignum x509; do
-  $CC $CFLAGS -DFuzzerTestOneInput=LLVMFuzzerTestOneInput -c -g BUILD/fuzz/$f.c -I BUILD/include
-  $CXX $CXXFLAGS $f.o BUILD/libssl.a BUILD/libcrypto.a $LIB_FUZZING_ENGINE -lgcrypt -o $EXECUTABLE_NAME_BASE-$f
-done
+build_exe() {
+  for f in bignum x509; do
+    cp BUILD/fuzz/$f.c target.cc
+    prepare_target || exit 2
+    sed -i 's/LLVMFuzzerTestOneInput/FuzzerTestOneInput/' target.cc
+    cp target.cc BUILD/fuzz/$f.target.cc
+
+    $CC $CFLAGS -c -g BUILD/fuzz/$f.target.cc -I BUILD/include -o $f.o
+
+    $CXX $CXXFLAGS $f.o BUILD/libssl.a BUILD/libcrypto.a -lgcrypt -lpthread -ldl -o $EXECUTABLE_NAME_BASE-$f.$1
+  done
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
