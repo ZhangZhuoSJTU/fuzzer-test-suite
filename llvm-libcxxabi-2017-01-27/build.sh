@@ -4,12 +4,26 @@
 . $(dirname $0)/../custom-build.sh $1 $2
 . $(dirname $0)/../common.sh
 
-get_svn_revision http://llvm.org/svn/llvm-project/libcxxabi/trunk 293329 SRC
-build_fuzzer
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_svn_revision http://llvm.org/svn/llvm-project/libcxxabi/trunk 293329 SRC
+  fi
+}
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-$CXX $CXXFLAGS -std=c++11 SRC/fuzz/cxa_demangle_fuzzer.cpp SRC/src/cxa_demangle.cpp -I SRC/include \
-   $LIB_FUZZING_ENGINE -o $EXECUTABLE_NAME_BASE
+build_exe() {
+  cp SRC/fuzz/cxa_demangle_fuzzer.cpp target.cc
+  prepare_target || exit 2
+
+  $CXX $CXXFLAGS -std=c++11 target.cc SRC/src/cxa_demangle.cpp -I SRC/include -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_exe "afl.clang" || exit 1
