@@ -12,13 +12,28 @@ build_lib() {
   (cd BUILD && make clean &&  make -j $JOBS obj/libre2.a)
 }
 
-get_git_revision https://github.com/google/re2.git 499ef7eff7455ce9c9fae86111d4a77b6ac335de SRC
-build_lib
-build_fuzzer
+build_exe() {
+  prepare_target || exit 2
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS ${SCRIPT_DIR}/target.cc  -I BUILD/ BUILD/obj/libre2.a -lpthread $LIB_FUZZING_ENGINE -o $EXECUTABLE_NAME_BASE
+  $CXX $CXXFLAGS target.cc  -I BUILD/ BUILD/obj/libre2.a -lpthread -o $EXECUTABLE_NAME_BASE.$1
+}
+
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_revision https://github.com/google/re2.git 499ef7eff7455ce9c9fae86111d4a77b6ac335de SRC
+  fi
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
