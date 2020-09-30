@@ -18,6 +18,19 @@ The current version supports [libFuzzer](http://libFuzzer.info) and
 [AFL](http://lcamtuf.coredump.cx/afl/).  In future versions we may support
 other fuzzing engines.
 
+# How to use
+
+```bash
+git clone https://github.com/ZhangZhuoSJTU/fuzzer-test-suite.git
+cd fuzzer-test-suite
+mkdir build
+cd build
+
+/full/path/of/fuzzer-test-suite/build.sh PROJNAME
+```
+
+Above commands will build three versions of `PROJNAME`, including the original one, the one instrumented by *afl-gcc*, and the one instrumented by *afl-clang-fast*.
+
 # See also
 
 * [AddressSanitizer](http://clang.llvm.org/docs/AddressSanitizer.html)
