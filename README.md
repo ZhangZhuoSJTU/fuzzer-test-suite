@@ -29,7 +29,7 @@ cd build
 /full/path/of/fuzzer-test-suite/build.sh PROJNAME
 ```
 
-Above commands will build three versions of `PROJNAME`, including the original one, the one instrumented by *afl-gcc*, and the one instrumented by *afl-clang-fast*.
+Above commands will build three versions of `PROJNAME`, including the one without instrumentation, the one instrumented by *afl-gcc*, and the one instrumented by *afl-clang-fast*.
 
 # See also
 
