@@ -36,21 +36,40 @@ download_fuzz_target() {
     projects/vorbis/decode_fuzzer.cc)
 }
 
-get_git_revision https://github.com/xiph/ogg.git \
-  c8391c2b267a7faf9a09df66b1f7d324e9eb7766 SRC/ogg
-get_git_revision https://github.com/xiph/vorbis.git \
-  c1c2831fc7306d5fbd7bc800324efd12b28d327f SRC/vorbis
-download_fuzz_target
+get_source() {
+  if [[ ! -d SRC ]]; then
+    mkdir SRC
+	get_git_revision https://github.com/xiph/ogg.git c8391c2b267a7faf9a09df66b1f7d324e9eb7766 SRC/ogg
+	get_git_revision https://github.com/xiph/vorbis.git c1c2831fc7306d5fbd7bc800324efd12b28d327f SRC/vorbis
+  fi
 
-build_ogg
-build_vorbis
-build_fuzzer
+  download_fuzz_target
+}
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
+build_lib() {
+  build_ogg
+  build_vorbis
+}
 
-$CXX $CXXFLAGS SRC/oss-fuzz/projects/vorbis/decode_fuzzer.cc \
-  -o $EXECUTABLE_NAME_BASE -L"$INSTALL_DIR/lib" -I"$INSTALL_DIR/include" \
-  $LIB_FUZZING_ENGINE -lvorbisfile  -lvorbis -logg
+build_exe() {
+  LIB_FUZZING_ENGINE="$SCRIPT_DIR/../normal.o"
+
+  $CXX $CXXFLAGS SRC/oss-fuzz/projects/vorbis/decode_fuzzer.cc \
+    -o $EXECUTABLE_NAME_BASE.$1 -L"$INSTALL_DIR/lib" -I"$INSTALL_DIR/include" \
+    $LIB_FUZZING_ENGINE -lvorbisfile  -lvorbis -logg
+}
+
+get_source || exit 1
+
+set -x
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
