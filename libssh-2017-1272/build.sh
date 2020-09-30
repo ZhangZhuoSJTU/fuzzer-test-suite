@@ -21,14 +21,29 @@ build_lib() {
   )
 }
 
-get_git_revision git://git.libssh.org/projects/libssh.git 7c79b5c154ce2788cf5254a62468fee5112f7640 SRC
-build_lib
-build_fuzzer
+build_exe() {
+  cp $SCRIPT_DIR/libssh_server_fuzzer.cc target.cc
+  prepare_target || exit 2
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-set -x
-$CXX $CXXFLAGS -std=c++11 "$SCRIPT_DIR/libssh_server_fuzzer.cc" -I BUILD/include/ BUILD/build/src/libssh.a $LIB_FUZZING_ENGINE -lcrypto -lgss -lz -o $EXECUTABLE_NAME_BASE
+  $CXX $CXXFLAGS -std=c++11 target.cc -I BUILD/include/ BUILD/build/src/libssh.a -lcrypto -lgss -lz -o $EXECUTABLE_NAME_BASE.$1
+}
 
+get_source() {
+  if [[ ! -d SRC ]]; then
+    get_git_revision https://github.com/lberrymage/libssh.git 7c79b5c154ce2788cf5254a62468fee5112f7640 SRC
+  fi
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
