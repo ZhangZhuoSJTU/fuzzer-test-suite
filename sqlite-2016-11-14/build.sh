@@ -4,14 +4,24 @@
 . $(dirname $0)/../custom-build.sh $1 $2
 . $(dirname $0)/../common.sh
 
-set -x
-build_fuzzer
-$CC $CFLAGS -c $SCRIPT_DIR/sqlite3.c
-$CC $CFLAGS -c $SCRIPT_DIR/ossfuzz.c
+build_exe() {
+  set -x
+  rm -rf BUILD
+  cp -r $SCRIPT_DIR BUILD
+  cp BUILD/ossfuzz.c target.cc
+  prepare_target || exit 2
+  cp target.cc BUILD/target.cc
 
-if [[ $FUZZING_ENGINE == "hooks" ]]; then
-  # Link ASan runtime so we can hook memcmp et al.
-  LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-fi
-$CXX $CXXFLAGS -ldl -pthread sqlite3.o ossfuzz.o $LIB_FUZZING_ENGINE \
-  -o $EXECUTABLE_NAME_BASE
+  $CC $CFLAGS -DSQLITE_OMIT_LOAD_EXTENSION -c BUILD/sqlite3.c -ldl -o sqlite3.o
+
+  $CXX $CXXFLAGS -ldl -pthread BUILD/target.cc sqlite3.o -o $EXECUTABLE_NAME_BASE.$1
+}
+
+setup_normal || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_exe "afl.clang" || exit 1
