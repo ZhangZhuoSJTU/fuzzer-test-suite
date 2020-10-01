@@ -18,7 +18,7 @@ build_exe() {
     --enable-static                   \
     CC="${CC}"                        \
     CXX="${CXX}"                      \
-    FUZZ_LIBS="${SCRIPT_DIR}/../normal.o"              \
+    FUZZ_LIBS="${SCRIPT_DIR}/../normal.cpp"              \
     FUZZ_CFLAGS="${CFLAGS}"           \
     FUZZ_CXXFLAGS="${CXXFLAGS}"       \
     LDFLAGS="-lpthread"               \
