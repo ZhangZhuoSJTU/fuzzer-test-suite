@@ -7,13 +7,10 @@
 build_lib() {
   rm -rf BUILD
   cp -rf SRC BUILD
+  LIB_FUZZING_ENGINE="${SCRIPT_DIR}/../normal.o"
   # workaround https://github.com/google/fuzzer-test-suite/issues/131
   sed -i 's/-Wshadow//g' BUILD/configure.ac BUILD/third_party/mbedtls/repo.patched/CMakeLists.txt
   [[ -f $LIB_FUZZING_ENGINE ]] && cp $LIB_FUZZING_ENGINE BUILD/tests/fuzz/
-  if [[ $FUZZING_ENGINE == "hooks" ]]; then
-    # Link ASan runtime so we can hook memcmp et al.
-    LIB_FUZZING_ENGINE="$LIB_FUZZING_ENGINE -fsanitize=address"
-  fi
   (cd BUILD && ./bootstrap && ./configure \
     --disable-shared                    \
     --enable-fuzz-targets               \
@@ -40,14 +37,32 @@ build_lib() {
     && make V=1 -j $JOBS)
 }
 
-rm -rf SRC
-[[ -z "${REVISION}" ]] && REVISION="79c4830c3c17369909e0906d8f455ecf2be4b6aa"
-get_git_revision https://github.com/openthread/openthread.git "${REVISION}" SRC
-build_fuzzer || exit 1
-build_lib || exit 1
+get_source() {
+  [[ -z "${REVISION}" ]] && REVISION="79c4830c3c17369909e0906d8f455ecf2be4b6aa"
+  if [[ ! -d SRC ]]; then
+	get_git_revision https://github.com/openthread/openthread.git "${REVISION}" SRC
+  fi
+}
 
-if [[ ! -d seeds-radio ]]; then
-  cp -r BUILD/tests/fuzz/corpora/radio-receive-done seeds-radio
-fi
-cp BUILD/tests/fuzz/ip6-send-fuzzer $EXECUTABLE_NAME_BASE-ip6
-cp BUILD/tests/fuzz/radio-receive-done-fuzzer $EXECUTABLE_NAME_BASE-radio
+build_exe() {
+  if [[ ! -d seeds-radio ]]; then
+    cp -r BUILD/tests/fuzz/corpora/radio-receive-done seeds-radio
+  fi
+
+  cp BUILD/tests/fuzz/ip6-send-fuzzer $EXECUTABLE_NAME_BASE-ip6.$1
+  cp BUILD/tests/fuzz/radio-receive-done-fuzzer $EXECUTABLE_NAME_BASE-radio.$1
+}
+
+get_source || exit 1
+
+setup_normal || exit 1
+build_lib || exit 1
+build_exe "normal" || exit 1
+
+setup_afl || exit 1
+build_lib || exit 1
+build_exe "afl" || exit 1
+
+setup_afl_clang || exit 1
+build_lib || exit 1
+build_exe "afl.clang" || exit 1
