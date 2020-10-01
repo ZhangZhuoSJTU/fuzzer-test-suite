@@ -6,12 +6,12 @@
 
 get_source() {
   [ ! -e libpng-1.2.56.tar.gz ] && wget https://downloads.sourceforge.net/project/libpng/libpng12/older-releases/1.2.56/libpng-1.2.56.tar.gz
-  [ ! -e libpng-1.2.56 ] && tar xf libpng-1.2.56.tar.gz
+  [ ! -e SRC ] && tar xf libpng-1.2.56.tar.gz && mv libpng-1.2.56 SRC
 }
 
 build_lib() {
   rm -rf BUILD
-  cp -rf libpng-1.2.56 BUILD
+  cp -rf SRC BUILD
   (cd BUILD && ./configure --disable-shared &&  make -j $JOBS)
 }
 
