@@ -7,7 +7,7 @@
 build_lib() {
   rm -rf BUILD
   cp -rf SRC BUILD
-  LIB_FUZZING_ENGINE="${SCRIPT_DIR}/../normal.o"
+  LIB_FUZZING_ENGINE="${SCRIPT_DIR}/../normal.cpp"
   # workaround https://github.com/google/fuzzer-test-suite/issues/131
   sed -i 's/-Wshadow//g' BUILD/configure.ac BUILD/third_party/mbedtls/repo.patched/CMakeLists.txt
   [[ -f $LIB_FUZZING_ENGINE ]] && cp $LIB_FUZZING_ENGINE BUILD/tests/fuzz/

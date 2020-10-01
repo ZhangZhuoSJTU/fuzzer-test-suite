@@ -1,10 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-extern void LLVMFuzzerTestOneInput(unsigned char *buf, size_t size);
+extern "C" {
+    int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
+    __attribute__((weak)) int LLVMFuzzerInitialize(int *argc, char ***argv);
+}
 
 int main(int argc, char** argv)
 {
+        if(argc <= 1)
+        {
+                exit(1);
+                printf("argc error!\n");
+        }
         size_t length, result;
         unsigned char* buf;
         FILE *fp = fopen(argv[1], "rb");
@@ -14,7 +23,7 @@ int main(int argc, char** argv)
                 printf("Open error!\n");
         }
         fseek(fp, 0, SEEK_END);
-        length = ftell(fp);
+        length = (size_t)ftell(fp);
         rewind(fp);
         buf = (unsigned char*)malloc(length);
         if(buf == NULL)

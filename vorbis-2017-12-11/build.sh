@@ -52,11 +52,12 @@ build_lib() {
 }
 
 build_exe() {
-  LIB_FUZZING_ENGINE="$SCRIPT_DIR/../normal.o"
+  cp SRC/oss-fuzz/projects/vorbis/decode_fuzzer.cc target.cc
+  prepare_target || exit 2
 
-  $CXX $CXXFLAGS SRC/oss-fuzz/projects/vorbis/decode_fuzzer.cc \
+  $CXX $CXXFLAGS target.cc \
     -o $EXECUTABLE_NAME_BASE.$1 -L"$INSTALL_DIR/lib" -I"$INSTALL_DIR/include" \
-    $LIB_FUZZING_ENGINE -lvorbisfile  -lvorbis -logg
+    -lvorbisfile  -lvorbis -logg
 }
 
 get_source || exit 1
