@@ -32,7 +32,7 @@ build_lib() {
 build_exe() {
   prepare_target || exit 2
 
-  $CXX $CXXFLAGS *.o target.cc -I SRC/src -o $EXECUTABLE_NAME_BASE
+  $CXX $CXXFLAGS *.o target.cc -I SRC/src -o $EXECUTABLE_NAME_BASE.$1
 }
 
 get_source || exit 1
