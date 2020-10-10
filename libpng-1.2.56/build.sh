@@ -17,9 +17,10 @@ build_lib() {
 
 build_exe(){
   prepare_target || exit 1
-  $CXX $CXXFLAGS -std=c++11 -no-pie target.cc BUILD/.libs/libpng12.a -I BUILD/ -I BUILD -lz -o $EXECUTABLE_NAME_BASE.$1
+  $CXX $CXXFLAGS -std=c++11 -no-pie target.cc BUILD/.libs/libpng12.a -I BUILD/ -I BUILD -lstdc++ -lm -lz -o $EXECUTABLE_NAME_BASE.$1
 }
 
+set -x
 get_source || exit 1
 
 setup_afl_clang || exit 1

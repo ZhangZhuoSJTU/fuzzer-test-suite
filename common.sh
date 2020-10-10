@@ -117,8 +117,8 @@ build_fuzzer() {
 }
 
 setup_afl_clang() {
-  export CC=afl-clang-fast
-  export CXX=afl-clang-fast++
+  export CC=$SCRIPT_DIR/../iafl-clang-fast
+  export CXX=$SCRIPT_DIR/../iafl-clang-fast++
   export AFL_DONT_OPTIMIZE="yes"
   export CPPFLAGS="-g -O2 -no-pie"
   export CFLAGS="-g -O2 -no-pie"
@@ -126,8 +126,8 @@ setup_afl_clang() {
 }
 
 setup_afl() {
-  export CC=afl-gcc
-  export CXX=afl-g++
+  export CC=$SCRIPT_DIR/../iafl-gcc
+  export CXX=$SCRIPT_DIR/../iafl-g++
   export AFL_DONT_OPTIMIZE="yes"
   export CPPFLAGS="-g -O2 -no-pie"
   export CFLAGS="-g -O2 -no-pie"
@@ -135,11 +135,11 @@ setup_afl() {
 }
 
 setup_normal() {
-  export CC=gcc
-  export CXX=g++
-  export CPPFLAGS="-g -O2 -no-pie"
-  export CFLAGS="-g -O2 -no-pie"
-  export CXXFLAGS="-g -O2 -no-pie"
+  export CC=$SCRIPT_DIR/../igcc
+  export CXX=$SCRIPT_DIR/../ig++
+  export CPPFLAGS="-g3 -O2 -no-pie"
+  export CFLAGS="-g3 -O2 -no-pie"
+  export CXXFLAGS="-g3 -O2 -no-pie"
 }
 
 prepare_target() {
