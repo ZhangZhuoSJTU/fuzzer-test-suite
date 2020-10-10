@@ -2,6 +2,8 @@
 
 afl-clang-fast++ "$@"
 for file in $(find . -name "*.o"); do
-    new_rodata=".text.$(echo -n "$file.rodata" | md5sum | awk '{print $1}')"
-    objcopy --set-section-flags .rodata=contents,alloc,load,readonly,code --rename-section .rodata=$new_rodata $file
+    for section in $(readelf -W -S $file | grep .rodata | awk -F ']' '{print $2}' | awk '{print $1}'); do
+        new_section=".text.$(echo -n "$file$section" | md5sum | awk '{print $1}')"
+        objcopy --set-section-flags $section=contents,alloc,load,readonly,code --rename-section $section=$new_section $file
+    done
 done
